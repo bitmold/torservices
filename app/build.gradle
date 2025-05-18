@@ -42,13 +42,15 @@ android {
     }
 
     // ensure reproducible builds https://f-droid.org/docs/Reproducible_Builds/#png-crushcrunch
-    aaptOptions {
-        cruncherEnabled = false
-    }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/*.version']
+        }
     }
 
     /*
@@ -58,20 +60,7 @@ android {
      is hacked in using some special technique that packagingOptions
      cannot affect.
      */
-    packagingOptions {
-        exclude 'META-INF/*.version'
-    }
 
-    lintOptions {
-        checkReleaseBuilds false
-        abortOnError true
-
-        htmlReport true
-        xmlReport false
-        textReport false
-
-        lintConfig file("lint.xml")
-    }
 
     splits {
         abi {
@@ -98,6 +87,15 @@ android {
 		include abiSplits.split(',')
 	    }
         }
+    }
+    namespace 'org.torproject.torservices'
+    lint {
+        abortOnError true
+        checkReleaseBuilds false
+        htmlReport true
+        lintConfig file('lint.xml')
+        textReport false
+        xmlReport false
     }
 }
 

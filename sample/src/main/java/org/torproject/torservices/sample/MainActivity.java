@@ -25,15 +25,14 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Log;
-import android.view.View;
 import android.webkit.WebView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.ContextCompat;
 import androidx.webkit.ProxyConfig;
 import androidx.webkit.ProxyController;
 
-import java.util.concurrent.Executor;
 import androidx.appcompat.app.AppCompatActivity;
 
 import info.guardianproject.netcipher.proxy.OrbotHelper;
@@ -68,50 +67,39 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStarting() {
                 statusTextView.setText("starting....");
-
             }
 
             @Override
             public void onStopping() {
                 statusTextView.setText("stopping....");
-
             }
 
             @Override
             public void onDisabled() {
                 statusTextView.setText("disable....");
-
             }
 
             @Override
             public void onStatusTimeout() {
                 statusTextView.setText("timeout....");
-
             }
 
             @Override
             public void onNotYetInstalled() {
                 statusTextView.setText("not installed....");
-
             }
         });
 
         webView = findViewById(R.id.webview);
-        findViewById(R.id.statusButton).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                webView.loadUrl("about:blank");
-                statusTextView.setText("loading...");
-                OrbotHelper.get(MainActivity.this).requestStartTor(getApplicationContext());
+        findViewById(R.id.statusButton).setOnClickListener(v -> {
+            webView.loadUrl("about:blank");
+            statusTextView.setText("loading...");
+            OrbotHelper.get(MainActivity.this).requestStartTor(getApplicationContext());
 
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        setProxy();
-                        webView.loadUrl("https://check.torproject.org/");
-                    }
-                });
-            }
+            runOnUiThread(() -> {
+                setProxy();
+                webView.loadUrl("https://check.torproject.org/");
+            });
         });
 
         loadUrlReceiver = new BroadcastReceiver() {
@@ -120,16 +108,13 @@ public class MainActivity extends AppCompatActivity {
                 final String status = intent.getStringExtra(OrbotHelper.EXTRA_STATUS);
                 Toast.makeText(context, status, Toast.LENGTH_SHORT).show();
                 Log.i(TAG, "onReceive: " + status + " " + intent);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        statusTextView.setText(status);
-                        if (OrbotHelper.STATUS_ON.equals(status)) {
-                            setProxy();
-                            webView.loadUrl("https://check.torproject.org/");
-                        } else {
-                            webView.loadUrl("about:blank");
-                        }
+                runOnUiThread(() -> {
+                    statusTextView.setText(status);
+                    if (OrbotHelper.STATUS_ON.equals(status)) {
+                        setProxy();
+                        webView.loadUrl("https://check.torproject.org/");
+                    } else {
+                        webView.loadUrl("about:blank");
                     }
                 });
             }
@@ -140,7 +125,10 @@ public class MainActivity extends AppCompatActivity {
         handlerThread.start();
         Looper looper = handlerThread.getLooper();
         Handler handler = new Handler(looper);
-        registerReceiver(loadUrlReceiver, new IntentFilter(OrbotHelper.ACTION_STATUS), null, handler);
+        ContextCompat.registerReceiver(this,
+                loadUrlReceiver,
+                new IntentFilter(OrbotHelper.ACTION_STATUS),
+                null, handler, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         GenericWebViewClient webViewClient = new GenericWebViewClient(this);
         webView.setWebViewClient(webViewClient);
@@ -151,17 +139,12 @@ public class MainActivity extends AppCompatActivity {
     private void setProxy() {
         ProxyConfig proxyConfig = new ProxyConfig.Builder()
                 .addProxyRule("127.0.0.1:8118")
-                .addDirect().build();
-        ProxyController.getInstance().setProxyOverride(proxyConfig, new Executor() {
-            @Override
-            public void execute(Runnable command) {
-                //do nothing
-            }
-        }, new Runnable() {
-            @Override
-            public void run() {
-
-            }
+                .addDirect()
+                .build();
+        ProxyController.getInstance().setProxyOverride(proxyConfig, command -> {
+            // do nothing - Executor for the listener to be executed in
+        }, () -> {
+            // do nothing - Listener called when the proxy setting change has been applied
         });
     }
 
